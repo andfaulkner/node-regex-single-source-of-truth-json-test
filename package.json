@@ -1,0 +1,19 @@
+{
+  "name": "extended-regexes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Andrew Faulkner <andfaulkner@gmail.com> (https://github.com/andfaulkner)",
+  "license": "ISC",
+  "dependencies": {
+    "asyncawait": "^1.0.1",
+    "babel-runtime": "^5.8.25",
+    "colors": "^1.1.2",
+    "lodash": "^3.10.1",
+    "xregexp": "^3.0.0",
+    "xregexp-lookbehind": "^1.0.0"
+  }
+}
