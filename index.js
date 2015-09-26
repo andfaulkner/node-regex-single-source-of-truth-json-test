@@ -43,6 +43,31 @@ var miniJSON = {
         }, { 
             fieldName: 'Phone Number 1',
             dataDependency: 'something'
+        }, {
+            fieldName: 'Case Assignment Section',
+            type: 'section',
+            elements: [{
+                fieldName: 'Assign To',
+                field: 'owner',
+                type: 'picklist'
+            }, {
+                fieldName: 'Is this case ready for closure?',
+                type: 'radioHorizontal',
+                radios: [{
+                    caption: 'yes',
+                    value: 'true'
+                }, {
+                    caption: 'no',
+                    value: 'false'
+                }]
+            }, {
+                name: 'Close Reason',
+                field: 'closeReason',
+                caption: 'close_reason',
+                displayRule: 'caseIsReadyForClosure',
+                type: 'picklist',
+                picklistData: 'close_reasons'
+            }]
         }
     ]
 };
@@ -50,12 +75,12 @@ var miniJSON = {
 
 
 //VALIDATION STUFF//
-function validateType(el, newField, continueOnFail){
+var validateType = function validateType(curNode, newField, continueOnFail){
     if (newField.type !== 'picklist') {
         try {
-            if (el.picklistData) {
+            if (curNode.picklistData) {
                 throw new Error('picklistData property defined for element of type "' + 
-                    newField.type + '" in element "' + el.fieldName + 
+                    newField.type + '" in element "' + curNode.fieldName + 
                     '". picklistData prop may only be defined for picklists.\n' + 
                     '------------------------------------------------------'.red.bgBlack.bold);
             }
@@ -63,7 +88,7 @@ function validateType(el, newField, continueOnFail){
             console.error('------------------------------------------------------'.red.bgBlack.bold + 
                             '\n' + 'Invalid field type for "picklistData" '.red.bgBlack.bold +
                             ' in field element:: '.red.bgBlack.bold + '\n' +
-                            '  ' + el.fieldName.white.bgRed.bold.underline + '\n',
+                            '  ' + curNode.fieldName.white.bgRed.bold.underline + '\n',
                           e.toString().red.bgBlack.bold + '\n');
             if (!continueOnFail) { 
                  console.trace(validateType);
@@ -73,59 +98,122 @@ function validateType(el, newField, continueOnFail){
     } else {
         // TODO set up the reverse of the if condition    
     }
-}
+};
 ///////////////////
 
 
-
-var outObj = { 
-    name: miniJSON.name,
-    elements: []
+/**
+ * Contains functions to ease creation of certain output properties from 
+ * 'expandable' input properties
+ */
+var makeOutputTreeProp = {
+    
+    field: function field(text){
+        console.log('makeOutputTreeProp.field:: ' + text);
+        return (XRegExp.replaceLb(text, '(?<=[A-Za-z0-9])', /\s./g, function($1) {
+                return $1.charAt(1).toUpperCase();
+            })).replace(/^(.)/g, function($1) { 
+                return $1.toLowerCase(); 
+            }).replace(/\?$/g, '');
+    },
+    
+    caption: function makeCaption(text) {
+        return (text.replace(/\s/g, '_').toLowerCase()
+            .replace(/_([0-9][0-9]?)$/, function($1){
+                return _.last($1);
+            }).replace(/\?$/g, ''));
+    }
 };
 
-miniJSON.elements.forEach(function(el) {
-    function makeFieldName(text){
-        return (XRegExp.replaceLb(text, '(?<=[A-Za-z0-9])', /\s./g, function($1) {
-            return $1.charAt(1).toUpperCase();
-        })).replace(/^(.)/g, function($1) { 
-            return $1.toLowerCase(); 
-        });
+
+var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
+    //handle tree nodes of type 'elements' 
+    if (curNode.elements) {
+        console.log('curNode has elements!');
+        console.log('curNode.name::: ' + curNode.name);
+        console.log('________ RECURSE RETURNING...____________');
+         return {
+            name: curNode.name || curNode.fieldName,
+            type: curNode.type || 'section',
+            caption: makeOutputTreeProp.caption(curNode.name || curNode.fieldName),
+            elements: parseTreeNode(curNode.elements)
+        };
+    } else {
+        return next(curNode);
     }
 
-    function makeCaption(text) {
-        return (el.fieldName.replace(/\s/g, '_').toLowerCase()
-                    .replace(/_([0-9][0-9]?)$/, function($1){
-                        return _.last($1);
-                    }));
-    }
+//var outObj = [];
+};
 
-    var newField = {
-        comment: (el.comment || el.fieldName),
-        field: (el.field || makeFieldName(el.fieldName)),
-        caption: (el.caption || makeCaption(el.fieldName)), 
-        type: el.type || ((el.picklistData) ? 'picklist' : 'textbox')
-    };
 
-    validateType(el, newField, true);
 
-    if (newField.type === 'picklist') {
-       newField.picklistData = el.picklistData || newField.caption + 's'; 
-    }
 
-    if (!!el.dataDependency) {
-        if (_.isArray(el.dataDependency) === true) {
-            newField.dataDependency = [];
-            el['dataDependency'].forEach(function(fieldDepOn) {
-                newField['dataDependency'].push(makeFieldName(fieldDepOn));
-            });
-        } else if (_.includes(el.dataDependency, ',')) {
-            newField['dataDependency'] = el.dataDependency.split(',');
-        } else {
-            newField['dataDependency'] = el.dataDependency;
-        }
-    } 
 
-    outObj.elements.push(newField);
-});
+/**
+ * parse single node of 'single source of truth' data object
+ */
+var parseTreeNode = function parseTreeNode(curNode) {
 
-console.dir(outObj, { depth: Infinity } );
+    console.log('entered parseTreeNode');
+    console.log('curNode.field || curNode.fieldName::: ' + (curNode.field || curNode.fieldName));
+
+    var curOutputTreeNode = {};
+
+    return handleElementsTreeNodes(curNode, function(curElemNode){
+
+        return _.map(curElemNode, function(curNodeInElemNode){ 
+                    
+            return handleElementsTreeNodes(curNodeInElemNode, function(el){
+
+                console.log('********************************* ENTERED forOwn loop **********************************');
+                console.log('another spin of forOwn!');
+                console.log('el.field || el.fieldName::: ' + (el.field || el.fieldName));
+                console.log('el?');
+                console.dir(el, { depth: 20 });
+        
+                var newField = {
+                    type: el.type || ((el.picklistData) ? 'picklist' : 'textbox'),
+                    comment: (el.comment ||el.fieldName),
+                    field: (el.field || makeOutputTreeProp.field(el.fieldName)),
+                    caption: (el.caption || makeOutputTreeProp.caption(el.fieldName)),
+                    name: el.fieldName
+                };
+            
+                validateType(el, newField, true);
+            
+                switch(newField.type) {
+                    case "picklist":
+                        newField.picklistData = el.picklistData || newField.caption + 's';
+                        break;
+                    case "section":
+                        break;
+                    default:
+                        console.error('newField.type is of type: ' + newField.type); 
+                }
+            
+            
+                if (!!el.dataDependency) {
+                    if (_.isArray(el.dataDependency) === true) {
+                        newField.dataDependency = [];
+                            console.log("in isArray for el");
+                        el.dataDependency.forEach(function(fieldDepOn) {
+                            newField.dataDependency.push(makeOutputTreeProp.field(fieldDepOn));
+                        });
+                    } else if (_.includes(el.dataDependency, ',')) {
+                        newField.dataDependency = el.dataDependency.split(',');
+                    } else {
+                        newField.dataDependency = el.dataDependency;
+                    }
+                } 
+           
+                var finalObj = (_.omit(_.defaults(newField, el), 'fieldName'));
+                console.log(finalObj);
+                console.log('END OF PARSE FN');
+                return finalObj;
+           });
+       });
+   });
+
+};
+
+console.dir(parseTreeNode(miniJSON), { depth: Infinity } );
