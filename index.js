@@ -10,7 +10,7 @@ _.merge(XRegExp, require('xregexp-lookbehind'));
 
 
 
-var miniJSON = {
+var formData = {
     name: 'case-capture',
     elements: [
         { 
@@ -49,7 +49,8 @@ var miniJSON = {
             elements: [{
                 fieldName: 'Assign To',
                 field: 'owner',
-                type: 'picklist'
+                type: 'picklist',
+                picklist: 'assignTos'
             }, {
                 fieldName: 'Is this case ready for closure?',
                 type: 'radioHorizontal',
@@ -61,12 +62,9 @@ var miniJSON = {
                     value: 'false'
                 }]
             }, {
-                name: 'Close Reason',
-                field: 'closeReason',
-                caption: 'close_reason',
+                fieldName: 'Close Reason',
                 displayRule: 'caseIsReadyForClosure',
                 type: 'picklist',
-                picklistData: 'close_reasons'
             }]
         }
     ]
@@ -75,7 +73,7 @@ var miniJSON = {
 
 
 //VALIDATION STUFF//
-var validateType = function validateType(curNode, newField, continueOnFail){
+var validateType = function validateType(curNode, newField, continueOnFail) {
     if (newField.type !== 'picklist') {
         try {
             if (curNode.picklistData) {
@@ -95,7 +93,19 @@ var validateType = function validateType(curNode, newField, continueOnFail){
                  process.exit(1);
             }
         }
-    } else {
+    } else if (newField.type === 'picklist') {
+        try {
+            if (!curNode.picklistData) {
+                throw new Error('picklistData property not defined for element of ' +
+                                'type picklist. - in field element: ' + curNode.fieldName);
+            }
+        } catch (e) {
+            console.error('------------------------------------------------------'.red.bgBlack.bold + 
+                          '\n' + 'Lack of picklist data property for field: '.red.bgBlack.bold +
+                          '\n ' + curNode.fieldName.white.bgRed.bold.underline + '\n',
+                          e.toString().red.bgBlack.bold + '\n');
+             
+        }
         // TODO set up the reverse of the if condition    
     }
 };
@@ -213,7 +223,7 @@ var parseTreeNode = function parseTreeNode(curNode) {
            });
        });
    });
-
 };
 
-console.dir(parseTreeNode(miniJSON), { depth: Infinity } );
+
+console.dir(parseTreeNode(formData), { depth: Infinity } );
