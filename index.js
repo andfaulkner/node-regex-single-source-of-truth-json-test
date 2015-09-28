@@ -74,17 +74,16 @@ var formData = {
 
 //VALIDATION STUFF//
 var validateType = function validateType(curNode, newField, continueOnFail) {
+    var errBorder = '\n' + '------------------------------------------------------'.red.bgBlack.bold + '\n';
     if (newField.type !== 'picklist') {
         try {
             if (curNode.picklistData) {
                 throw new Error('picklistData property defined for element of type "' + 
                     newField.type + '" in element "' + curNode.fieldName + 
-                    '". picklistData prop may only be defined for picklists.\n' + 
-                    '------------------------------------------------------'.red.bgBlack.bold);
+                    '". picklistData prop may only be defined for picklists.' + errBorder); 
             }
         } catch (e) {
-            console.error('------------------------------------------------------'.red.bgBlack.bold + 
-                            '\n' + 'Invalid field type for "picklistData" '.red.bgBlack.bold +
+            console.error(errBorder + 'Invalid field type for "picklistData" '.red.bgBlack.bold +
                             ' in field element:: '.red.bgBlack.bold + '\n' +
                             '  ' + curNode.fieldName.white.bgRed.bold.underline + '\n',
                           e.toString().red.bgBlack.bold + '\n');
@@ -97,14 +96,18 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
         try {
             if (!curNode.picklistData) {
                 throw new Error('picklistData property not defined for element of ' +
-                                'type picklist. - in field element: ' + curNode.fieldName);
+                                'type picklist. - in field element: ' + curNode.fieldName + 
+                                errBorder);
             }
         } catch (e) {
-            console.error('------------------------------------------------------'.red.bgBlack.bold + 
-                          '\n' + 'Lack of picklist data property for field: '.red.bgBlack.bold +
-                          '\n ' + curNode.fieldName.white.bgRed.bold.underline + '\n',
+            console.error(errBorder + 
+                          'Lack of picklist data property for field: '.red.bgBlack.bold +
+                          curNode.fieldName.white.bgRed.bold.underline + '\n',
                           e.toString().red.bgBlack.bold + '\n');
-             
+            if (!continueOnFail) { 
+                 console.trace(validateType);
+                 process.exit(1);
+            } 
         }
         // TODO set up the reverse of the if condition    
     }
