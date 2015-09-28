@@ -109,7 +109,6 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
                  process.exit(1);
             } 
         }
-        // TODO set up the reverse of the if condition    
     }
 };
 ///////////////////
@@ -130,7 +129,7 @@ var makeOutputTreeProp = {
             }).replace(/\?$/g, '');
     },
     
-    caption: function makeCaption(text) {
+    caption: function caption(text) {
         return (text.replace(/\s/g, '_').toLowerCase()
             .replace(/_([0-9][0-9]?)$/, function($1){
                 return _.last($1);
@@ -139,12 +138,12 @@ var makeOutputTreeProp = {
 };
 
 
+/**
+  * return treeNodes of type 'elements' - within case definition
+  */
 var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
     //handle tree nodes of type 'elements' 
     if (curNode.elements) {
-        console.log('curNode has elements!');
-        console.log('curNode.name::: ' + curNode.name);
-        console.log('________ RECURSE RETURNING...____________');
          return {
             name: curNode.name || curNode.fieldName,
             type: curNode.type || 'section',
@@ -154,11 +153,7 @@ var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
     } else {
         return next(curNode);
     }
-
-//var outObj = [];
 };
-
-
 
 
 
@@ -178,15 +173,9 @@ var parseTreeNode = function parseTreeNode(curNode) {
                     
             return handleElementsTreeNodes(curNodeInElemNode, function(el){
 
-                console.log('********************************* ENTERED forOwn loop **********************************');
-                console.log('another spin of forOwn!');
-                console.log('el.field || el.fieldName::: ' + (el.field || el.fieldName));
-                console.log('el?');
-                console.dir(el, { depth: 20 });
-        
                 var newField = {
                     type: el.type || ((el.picklistData) ? 'picklist' : 'textbox'),
-                    comment: (el.comment ||el.fieldName),
+                    comment: (el.comment || el.fieldName),
                     field: (el.field || makeOutputTreeProp.field(el.fieldName)),
                     caption: (el.caption || makeOutputTreeProp.caption(el.fieldName)),
                     name: el.fieldName
@@ -220,8 +209,6 @@ var parseTreeNode = function parseTreeNode(curNode) {
                 } 
            
                 var finalObj = (_.omit(_.defaults(newField, el), 'fieldName'));
-                console.log(finalObj);
-                console.log('END OF PARSE FN');
                 return finalObj;
            });
        });
