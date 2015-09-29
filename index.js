@@ -1,15 +1,13 @@
-var domain = require('domain');
 var _ = require('lodash');
-var XRegExp = require('xregexp').XRegExp;
 var colors = require('colors');
 
+var XRegExp = require('xregexp').XRegExp;
 _.merge(XRegExp, require('xregexp-lookbehind'));
 
-// console.log(XRegExp.matchAllLb("Catwoman's cats are fluffy cats", '(?i)(?<!fluffy\\W+)', /cat\w*/i));
 
-
-
-
+//################################################################################
+//#~~~~~~~~~~~~~~~~~~~~~~ EXAMPLE DATA FOR INPUT INTO PARSER ~~~~~~~~~~~~~~~~~~~~~
+//################################################################################
 var formData = {
     name: 'case-capture',
     elements: [
@@ -69,8 +67,12 @@ var formData = {
         }
     ]
 };
+//#################################################################################
 
 
+//################################################################################
+//#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ACTUAL MODULE BEGINS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//################################################################################
 
 //VALIDATION STUFF//
 var validateType = function validateType(curNode, newField, continueOnFail) {
@@ -92,7 +94,7 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
                  process.exit(1);
             }
         }
-    } else if (newField.type === 'picklist') {
+    } /* else if (newField.type === 'picklist') {
         try {
             if (!curNode.picklistData) {
                 throw new Error('picklistData property not defined for element of ' +
@@ -109,7 +111,7 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
                  process.exit(1);
             } 
         }
-    }
+    } */
 };
 ///////////////////
 
@@ -118,28 +120,103 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
  * Contains functions to ease creation of certain output properties from 
  * 'expandable' input properties
  */
-var makeOutputTreeProp = {
-    
-    field: function field(text){
-        console.log('makeOutputTreeProp.field:: ' + text);
-        return (XRegExp.replaceLb(text, '(?<=[A-Za-z0-9])', /\s./g, function($1) {
+var makeOutputTreeProp = (function() {
+
+    //Lists some common pluralization issues in form data
+    var pluralizations = {
+       'country': 'countries',
+       'category': 'categories',
+       'person': 'people',
+       'city' : 'cities',
+       'loss': 'losses',
+       'status': 'statuses',
+       'summary': 'summaries',
+       'facility': 'facilities',
+       'address': 'addresses',
+       'injury': 'injuries',
+       'property': 'properties',
+       'currency': 'currencies',
+       'witness': 'witnesses',
+       'party': 'parties',
+       'company': 'companies',
+       'datum': 'data',
+       'business': 'businesses',
+       'quantity': 'quantities',
+       'recovery': 'recoveries',
+       'ethnicity': 'ethnicities',
+       'methodology': 'methodologies',
+       'secondary': 'secondaries',
+       'primary': 'primaries',
+       'entity': 'entities',
+       'severity': 'severities',
+       'nationality': 'nationalities',
+       'box': 'boxes',
+       'supply': 'supplies',
+       'history': 'histories',
+       'activity': 'activities',
+       'man': 'men',
+       'woman': 'women',
+       'child': 'children',
+       'foot': 'feet',
+       'aircraft': 'aircraft',
+       'series': 'series',
+       'media': 'media'
+    };
+
+    /**
+     * Converts field name into value intended for use in property named 'field'
+     */
+    var field = function field(fieldName){
+        return (XRegExp.replaceLb(fieldName, '(?<=[A-Za-z0-9])', /\s./g, function($1) {
                 return $1.charAt(1).toUpperCase();
             })).replace(/^(.)/g, function($1) { 
                 return $1.toLowerCase(); 
             }).replace(/\?$/g, '');
-    },
-    
-    caption: function caption(text) {
-        return (text.replace(/\s/g, '_').toLowerCase()
+    };
+   
+    /**
+     * Converts field name into caption - for use in property 'caption'
+     */
+    var caption = function caption(fieldName) {
+        return (fieldName.replace(/\s/g, '_').toLowerCase()
             .replace(/_([0-9][0-9]?)$/, function($1){
                 return _.last($1);
             }).replace(/\?$/g, ''));
-    }
-};
+    };
+
+    /**
+     * Converts field name into picklist data - for use in property 'picklistData'
+     * @param {Boolean} complexCheck - if true, account for certain common abnormal pluralizations
+     */
+    var picklistData = function picklistData(fieldName, complexCheck) {
+        var captionVal = caption(fieldName); 
+        if (!complexCheck) {
+            return captionVal + 's';
+        }
+       
+        var pluralCaption = _.reduce(pluralizations, function(result, n, key){
+            return (_.endsWith(captionVal, key))
+                ? (captionVal.replace(key, this[key]))
+                : (result);
+        }, '', pluralizations);
+
+        return ((pluralCaption === '')
+                ? captionVal + 's'
+                : pluralCaption);  
+    };
+
+    //EXPORTED FUNCTIONS
+    return {
+        field: field, 
+        caption: caption,
+        picklistData: picklistData
+    };
+}());
+
 
 
 /**
-  * return treeNodes of type 'elements' - within case definition
+  * Return treeNodes of type 'elements' - within case definition
   */
 var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
     //handle tree nodes of type 'elements' 
@@ -158,7 +235,8 @@ var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
 
 
 /**
- * parse single node of 'single source of truth' data object
+ * Parse single node of 'single source of truth' data object
+ * Tailored to a specific type of node. TODO Requires generification (?)
  */
 var parseTreeNode = function parseTreeNode(curNode) {
 
@@ -197,7 +275,6 @@ var parseTreeNode = function parseTreeNode(curNode) {
                 if (!!el.dataDependency) {
                     if (_.isArray(el.dataDependency) === true) {
                         newField.dataDependency = [];
-                            console.log("in isArray for el");
                         el.dataDependency.forEach(function(fieldDepOn) {
                             newField.dataDependency.push(makeOutputTreeProp.field(fieldDepOn));
                         });
