@@ -48,7 +48,6 @@ var formData = {
                 fieldName: 'Assign To',
                 field: 'owner',
                 type: 'picklist',
-                picklist: 'assignTos'
             }, {
                 fieldName: 'Is this case ready for closure?',
                 type: 'radioHorizontal',
@@ -67,6 +66,14 @@ var formData = {
         }
     ]
 };
+
+var picklists = ['email_templates', 
+                 'countries', 
+                 'provinces', 
+                 'cities', 
+                 'names_of_bears',
+                 { 'templates': { url: '/template_url', text: 'name', value: 'id' } },
+                 'continents'];
 //#################################################################################
 
 
@@ -94,24 +101,7 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
                  process.exit(1);
             }
         }
-    } /* else if (newField.type === 'picklist') {
-        try {
-            if (!curNode.picklistData) {
-                throw new Error('picklistData property not defined for element of ' +
-                                'type picklist. - in field element: ' + curNode.fieldName + 
-                                errBorder);
-            }
-        } catch (e) {
-            console.error(errBorder + 
-                          'Lack of picklist data property for field: '.red.bgBlack.bold +
-                          curNode.fieldName.white.bgRed.bold.underline + '\n',
-                          e.toString().red.bgBlack.bold + '\n');
-            if (!continueOnFail) { 
-                 console.trace(validateType);
-                 process.exit(1);
-            } 
-        }
-    } */
+    }
 };
 ///////////////////
 
@@ -178,7 +168,8 @@ var makeOutputTreeProp = (function() {
      * Converts field name into caption - for use in property 'caption'
      */
     var caption = function caption(fieldName) {
-        return (fieldName.replace(/\s/g, '_').toLowerCase()
+        return (fieldName.replace(/\s/g, '_')
+            .toLowerCase()
             .replace(/_([0-9][0-9]?)$/, function($1){
                 return _.last($1);
             }).replace(/\?$/g, ''));
@@ -205,11 +196,42 @@ var makeOutputTreeProp = (function() {
                 : pluralCaption);  
     };
 
+
+    /**
+      * Turns a lightweight array of picklist options into a heavyweight picklist options object
+      * for consumption.
+      * @param {Array<String|Object>} picklistArray - array of picklist names (strings) and/or
+      *            objs w/ 1 key (whose string becomes the picklist name) containing an object
+      *            with a set of manually defined option fields that are added to the output
+      *            picklist options object. Provided properties override default properties.
+      * @returns {Object} Object containing each picklist options definition name as a key, with
+      *            each key's associated values providing the params of the picklist options. 
+      *                 
+      */
+    var picklistOptions = function picklistOptions(picklistArray){ 
+        //default vals for picklist option item; used when only picklist name passed; if object
+        //passed, def vals merged in to fill 'text' & 'value' fields if not present in given object
+        var def = Object.freeze({ text: 'value', value: 'value' });
+        
+        return _.reduce(picklistArray, function(result, val, key){
+            if (_.isString(val)){
+                result[val] = def;
+            }
+            if (_.isObject(val)){
+                var valKey1 = _.keys(val)[0];
+                var objIn1stKey = val[valKey1];
+                result[valKey1] = _.defaultsDeep(objIn1stKey, def);
+            }
+            return result;
+        },{});
+    };
+
     //EXPORTED FUNCTIONS
     return {
         field: field, 
         caption: caption,
-        picklistData: picklistData
+        picklistData: picklistData,
+        picklistOptions: picklistOptions
     };
 }());
 
@@ -240,8 +262,8 @@ var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
  */
 var parseTreeNode = function parseTreeNode(curNode) {
 
-    console.log('entered parseTreeNode');
-    console.log('curNode.field || curNode.fieldName::: ' + (curNode.field || curNode.fieldName));
+//    console.log('entered parseTreeNode');
+//    console.log('curNode.field || curNode.fieldName::: ' + (curNode.field || curNode.fieldName));
 
     var curOutputTreeNode = {};
 
@@ -294,3 +316,8 @@ var parseTreeNode = function parseTreeNode(curNode) {
 
 
 console.dir(parseTreeNode(formData), { depth: Infinity } );
+
+console.log(_.repeat('!', 100));
+console.log('***** makeOutputTreeProp.picklistOptions(picklists) *****');
+console.log(makeOutputTreeProp.picklistOptions(picklists));
+
