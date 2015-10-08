@@ -11,7 +11,7 @@ _.merge(XRegExp, require('xregexp-lookbehind'));
 var formData = {
     name: 'case-capture',
     elements: [
-        { 
+        {
             fieldName: 'Category Level 1'
         }, {
             fieldName: 'Category Level 2',
@@ -22,10 +22,10 @@ var formData = {
             dataDependency: 'categoryLevel1,categoryLevel2'
         }, {
             fieldName: 'Case Type',
-            type: 'picklist'   
+            type: 'picklist'
         }, {
             fieldName: 'Close Reason',
-            type: 'picklist'      
+            type: 'picklist'
         }, {
             fieldName: 'Case Title',
             picklistData: 'case_titles'
@@ -38,9 +38,16 @@ var formData = {
         }, {
             fieldName: 'Phone Location 1',
             dataDependency: ['something']
-        }, { 
+        }, {
+            fieldName: 'Glass',
+        }, {
             fieldName: 'Phone Number 1',
             dataDependency: 'something'
+        }, {
+            fieldName: 'Lass',
+        }, {
+            fieldName: 'Pass',
+            type: 'picklist'
         }, {
             fieldName: 'Case Assignment Section',
             type: 'section',
@@ -67,10 +74,10 @@ var formData = {
     ]
 };
 
-var picklists = ['email_templates', 
-                 'countries', 
-                 'provinces', 
-                 'cities', 
+var picklists = ['email_templates',
+                 'countries',
+                 'provinces',
+                 'cities',
                  'names_of_bears',
                  { 'templates': { url: '/template_url', text: 'name', value: 'id' } },
                  'continents'];
@@ -87,16 +94,16 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
     if (newField.type !== 'picklist') {
         try {
             if (curNode.picklistData) {
-                throw new Error('picklistData property defined for element of type "' + 
-                    newField.type + '" in element "' + curNode.fieldName + 
-                    '". picklistData prop may only be defined for picklists.' + errBorder); 
+                throw new Error('picklistData property defined for element of type "' +
+                    newField.type + '" in element "' + curNode.fieldName +
+                    '". picklistData prop may only be defined for picklists.' + errBorder);
             }
         } catch (e) {
             console.error(errBorder + 'Invalid field type for "picklistData" '.red.bgBlack.bold +
                             ' in field element:: '.red.bgBlack.bold + '\n' +
                             '  ' + curNode.fieldName.white.bgRed.bold.underline + '\n',
                           e.toString().red.bgBlack.bold + '\n');
-            if (!continueOnFail) { 
+            if (!continueOnFail) {
                  console.trace(validateType);
                  process.exit(1);
             }
@@ -107,7 +114,7 @@ var validateType = function validateType(curNode, newField, continueOnFail) {
 
 
 /**
- * Contains functions to ease creation of certain output properties from 
+ * Contains functions to ease creation of certain output properties from
  * 'expandable' input properties
  */
 var makeOutputTreeProp = (function() {
@@ -159,11 +166,11 @@ var makeOutputTreeProp = (function() {
     var field = function field(fieldName){
         return (XRegExp.replaceLb(fieldName, '(?<=[A-Za-z0-9])', /\s./g, function($1) {
                 return $1.charAt(1).toUpperCase();
-            })).replace(/^(.)/g, function($1) { 
-                return $1.toLowerCase(); 
+            })).replace(/^(.)/g, function($1) {
+                return $1.toLowerCase();
             }).replace(/\?$/g, '');
     };
-   
+
     /**
      * Converts field name into caption - for use in property 'caption'
      */
@@ -177,14 +184,24 @@ var makeOutputTreeProp = (function() {
 
     /**
      * Converts field name into picklist data - for use in property 'picklistData'
-     * @param {Boolean} complexCheck - if true, account for certain common abnormal pluralizations
+     * @param noComplexCheck {Boolean} if true, don't account for common abnormal pluralizations
      */
-    var picklistData = function picklistData(fieldName, complexCheck) {
-        var captionVal = caption(fieldName); 
-        if (!complexCheck) {
+    var picklistData = function picklistData(fieldName, noComplexCheck) {
+        console.log('TEST');
+        console.log('TEST');
+        console.log('TEST');
+        console.log('TEST');
+        console.log('TEST');
+        console.log('TEST');
+
+        var captionVal = caption(fieldName);
+        if (noComplexCheck) {
             return captionVal + 's';
         }
-       
+        console.log('_.endsWith(captionVal, \'ss\')');
+        console.log(_.endsWith(captionVal, 'ss'));
+        console.log('END _.endsWith(captionVal, \'ss\')');
+
         var pluralCaption = _.reduce(pluralizations, function(result, n, key){
             return (_.endsWith(captionVal, key))
                 ? (captionVal.replace(key, this[key]))
@@ -192,8 +209,10 @@ var makeOutputTreeProp = (function() {
         }, '', pluralizations);
 
         return ((pluralCaption === '')
-                ? captionVal + 's'
-                : pluralCaption);  
+                ? (_.endsWith(captionVal, 'ss')
+                    ? captionVal + 'es'
+                    : captionVal + 's')
+                : pluralCaption);
     };
 
 
@@ -205,14 +224,14 @@ var makeOutputTreeProp = (function() {
       *            with a set of manually defined option fields that are added to the output
       *            picklist options object. Provided properties override default properties.
       * @returns {Object} Object containing each picklist options definition name as a key, with
-      *            each key's associated values providing the params of the picklist options. 
-      *                 
+      *            each key's associated values providing the params of the picklist options.
+      *
       */
-    var picklistOptions = function picklistOptions(picklistArray){ 
+    var picklistOptions = function picklistOptions(picklistArray){
         //default vals for picklist option item; used when only picklist name passed; if object
         //passed, def vals merged in to fill 'text' & 'value' fields if not present in given object
         var def = Object.freeze({ text: 'value', value: 'value' });
-        
+
         return _.reduce(picklistArray, function(result, val, key){
             if (_.isString(val)){
                 result[val] = def;
@@ -228,7 +247,7 @@ var makeOutputTreeProp = (function() {
 
     //EXPORTED FUNCTIONS
     return {
-        field: field, 
+        field: field,
         caption: caption,
         picklistData: picklistData,
         picklistOptions: picklistOptions
@@ -241,7 +260,7 @@ var makeOutputTreeProp = (function() {
   * Return treeNodes of type 'elements' - within case definition
   */
 var handleElementsTreeNodes = function handleElementsTreeNodes(curNode, next){
-    //handle tree nodes of type 'elements' 
+    //handle tree nodes of type 'elements'
     if (curNode.elements) {
          return {
             name: curNode.name || curNode.fieldName,
@@ -269,8 +288,8 @@ var parseTreeNode = function parseTreeNode(curNode) {
 
     return handleElementsTreeNodes(curNode, function(curElemNode){
 
-        return _.map(curElemNode, function(curNodeInElemNode){ 
-                    
+        return _.map(curElemNode, function(curNodeInElemNode){
+
             return handleElementsTreeNodes(curNodeInElemNode, function(el){
 
                 var newField = {
@@ -280,9 +299,9 @@ var parseTreeNode = function parseTreeNode(curNode) {
                     caption: (el.caption || makeOutputTreeProp.caption(el.fieldName)),
                     name: el.fieldName
                 };
-            
+
                 validateType(el, newField, true);
-            
+
                 switch(newField.type) {
                     case "picklist":
                         newField.picklistData = el.picklistData || newField.caption + 's';
@@ -290,10 +309,10 @@ var parseTreeNode = function parseTreeNode(curNode) {
                     case "section":
                         break;
                     default:
-                        console.error('newField.type is of type: ' + newField.type); 
+                        console.error('newField.type is of type: ' + newField.type);
                 }
-            
-            
+
+
                 if (!!el.dataDependency) {
                     if (_.isArray(el.dataDependency) === true) {
                         newField.dataDependency = [];
@@ -305,8 +324,8 @@ var parseTreeNode = function parseTreeNode(curNode) {
                     } else {
                         newField.dataDependency = el.dataDependency;
                     }
-                } 
-           
+                }
+
                 var finalObj = (_.omit(_.defaults(newField, el), 'fieldName'));
                 return finalObj;
            });
